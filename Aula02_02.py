@@ -31,7 +31,7 @@ for cliente in df['Cliente'].unique():
 
 lista_clientes.append({
     'label': 'Todos os Clientes',
-    'Value': 'todos_clientes'
+    'value': 'todos_clientes'
 })
 
 # Criando lista de meses
