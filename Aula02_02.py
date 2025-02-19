@@ -1,4 +1,4 @@
-import plotly.graph_objs as graph_ob
+import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
 import dash 
@@ -6,6 +6,8 @@ import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import ThemeSwitchAIO
 from dash.dependencies import Input, Output
 from dash import html, dcc, Input, Output
+import os
+os.chdir(os.path.dirname(__file__))
 #configurando cores para os temas
 dark_theme = 'darkly'
 vapor_theme = 'vapor'
@@ -15,13 +17,13 @@ url_vapor_theme = dbc.themes.VAPOR
 #-------------------Dados---------------------------
 # Importando os dados da tabela em csv
 df = pd.read_csv('dataset_comp.csv')
-df['dt_Venda'] = pd.todatetime(df['dt_Venda'])
+df['dt_Venda'] = pd.to_datetime(df['dt_Venda'])
 df['Mes'] = df['dt_Venda'].dt.strftime('%b').str.upper()
 
 #--------------Listas----------------------------
 # criar lista de clientes
 lista_clientes = []
-for cliente in df['cliente'].unique():
+for cliente in df['Cliente'].unique():
     lista_clientes.append({
         'label': cliente,
         'value': cliente
@@ -192,7 +194,7 @@ def filtro_mes(meses_selecionados):
 
 #---------------------CALLBAKC--------------------------
 @app.callback(
-    Output('output-cliente', 'children'),
+    Output('output_cliente', 'children'),
     [
         Input('dropdown_cliente', 'value'),
         Input('radio_categorias', 'value')
@@ -219,3 +221,160 @@ def atualizar_texto(cliente_selecionado, categoria_selecionada):
         Input(ThemeSwitchAIO.ids.switch('theme'), 'value')
     ]
 )
+def visual01(clientes, mes, categoria, taggle):
+    template = dark_theme if taggle else vapor_theme
+
+    nome_cliente = filtro_cliente(cliente)
+    nome_categoria = filtro_categoria(categoria)
+    nome_mes = filtro_mes(mes)
+
+    cliente_mes_categoria = nome_cliente & nome_categoria & nome_mes 
+    df_filtrado = df.loc[cliente_mes_categoria]
+
+    df_grupo = df_filtrado.groupby(['Produto', 'Categorias'])['Total Vendas'].sum().reset_index()
+    df_top5 = df_grupo.sort_values(by='Total Vendas', ascending=False).head(5)
+
+    #Criando o Gráfico
+    fig = px.bar(
+        df_top5,
+        x='Produto',
+        y='Total Vendas',
+        color='Total Vendas',
+        text='Total Vendas',
+        color_continuous_scale='blues',
+        height=280,
+        template=template
+    )
+    fig.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+    fig.update_layout(
+       margin=dict(t=0),
+       xaxis=dict(showgrid=False),
+       yaxis=dict(showgrid=False, range=[
+        df_top5['Total Vendas'].min() * 0,
+        df_top5['Total Vendas'].max() * 1.2
+        ]),
+        xaxis_title = None,
+        yaxis_title = None,
+        xaxis_tickangle = -15,
+        font=dict(size=15),
+        plot_bgcolor = 'rgba(0,0,0,0)',
+        paper_bgcolor = 'rgba(0,0,0,0)'
+   )
+    return fig
+
+@app.callback(
+    [
+        Output('visual02', 'figure'),
+        Output('visual03', 'figure')
+    ],
+    [
+        Input('radio_mes', 'value'),
+        Input('radio_categorias', 'value'),
+        Input(ThemeSwitchAIO.ids.switch('theme'), 'value')
+    ]
+)
+def visual02_03(mes, categoria, taggle):
+    #definido o tema que foi escolhido
+    template = vapor_theme if taggle else dark_theme
+
+    #filtrando apenas poe mês
+    nome_mes = filtro_mes(mes)
+    nome_categoria = filtro_categoria(categoria)
+
+    #Combinar filtros
+    mes_categoria = nome_mes & nome_categoria
+    
+    # filtrando o dataframe
+    df2 = df.loc[nome_categoria]
+    df3 = df.loc[mes_categoria]
+
+    #gerar analise de dados
+    df_vendasMesLoja2 = df2.groupby(['Mes', 'Loja', ])['Total Vendas'].sum().reset_index()
+    df_vendasMesLoja3 = df3.groupby(['Mes', 'Loja', ])['Total Vendas'].sum().reset_index()
+
+    #normaliza o tamanho das bolhas
+    max_size = df_vendasMesLoja2['Total Vendas'].max()
+    min_size = df_vendasMesLoja2['Total Vendas'].min()
+
+    # definindo a ordem dos meses
+    ordem_mes = [
+        'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
+        'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
+    ]
+
+    # DEFINIR AS CORES PARA CADA LOJA
+    cores_lojas = {
+        'Rio de Janeiro'    : 'green',
+        'Salvador'          : 'yellow',
+        'Santos'            : 'purple',
+        'São Paulo'         : 'gray',
+        'Três Rios'         : 'blue'            
+    }
+
+# criar o grafico do visual 02
+    fig2 = go.Figure()
+    for loja in df_vendasMesLoja2['Loja'].unique():
+        df_loja = df_vendasMesLoja2[df_vendasMesLoja2['Loja'] == loja]
+        cor = cores_lojas.get(loja, 'black')
+
+        fig2.add_trace(
+            go.Scatter(
+                x = df_loja['Mes'],
+                y = df_loja['Total Vendas'],
+                mode= 'markers',
+                marker= dict(
+                    color = cor,
+                    size = (df_loja['Total Vendas'] - min_size) / (max_size - min_size) * 50,
+                    opacity=0.5,
+                    line=dict(color=cor, width=0)       
+                ),
+                name=str(loja)
+            )
+        )
+    fig2.update_layout(
+        margin=dict(t=0),
+        template=template,
+        plot_bgcolor = 'rgba(0,0,0,0)',
+        paper_bgcolor = 'rgba(0,0,0,0)',
+        xaxis=dict(
+            categoryorder='array',
+            categoryarray=ordem_mes,
+            showgrid=False
+        ),
+        yaxis=dict(showgrid=False)
+    )
+    fig3 = go.Figure(data=go.Scatterpolar(
+        r = df_vendasMesLoja3['Total Vendas'],
+        theta= df_vendasMesLoja3['Loja'],
+        fill='toself',
+        line=dict(color='rgb(31, 119, 180)', size=8),
+        marker=dict(color='rgb(31, 119, 180)', size=8),
+        opacity=0.7
+    ))
+    fig3.update_layout(
+        template=template,
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                tickfont=dict(size=10),
+                tickangle=0,
+                tickcolor='rgba(68,68,68,0)',
+                ticklen= 5,
+                tickwidth=1,
+                tickprefix='',
+                ticksuffix='',
+                range=[0, max(df_vendasMesLoja3['Total Vendas']) + 1000]
+            )
+        ),
+        font=dict(family='Fira Code', size=12),
+        plot_bgcolor= 'rgba(0,0,0,0)',
+        paper_bgcolor= 'rgba(0,0,0,0)',
+        margin=dict(l=40, r=40, t=80, b=40)
+
+    )
+    return fig2, fig3
+
+
+# Suindo servidor
+if __name__ == '__main__':
+    app.run_server(debug=True)
