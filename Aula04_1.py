@@ -103,24 +103,25 @@ class AnalisadorDeVendas:
             title = 'vendas por dia da Semana',
             color = 'valor'
         )
+        return fig
 # identifica os outliers com base em umintervalo interquartil
-def analise_outliers(self):
-    q1 = self.dados['valor'].quantile(0.25)
-    q3 = self.dados['valor'].quantile(0.75)
-    iqr = q3 - q1
-    lim_inferior = q1 - 1.5 * iqr
-    lim_superior = q3 + 1.5 * iqr
-    outliers = self.dados[(self.dados['valor'] < lim_inferior) | (self.dados['valor'] < lim_superior) ]
-    fig = px.scatter(
-        outliers,
-        x = 'data',
-        y = 'valor',
-        title = 'Outliers de Vendas'
-    )
-    return fig
+    def analise_outliers(self):
+        q1 = self.dados['valor'].quantile(0.25)
+        q3 = self.dados['valor'].quantile(0.75)
+        iqr = q3 - q1
+        lim_inferior = q1 - 1.5 * iqr
+        lim_superior = q3 + 1.5 * iqr
+        outliers = self.dados[(self.dados['valor'] <= lim_inferior) | (self.dados['valor'] >= lim_superior) ]
+        fig = px.scatter(
+            outliers,
+            x = 'data',
+            y = 'valor',
+            title = 'Outliers de Vendas'
+        )
+        return fig
 #retona o grafico de distribuição de vendas usando o plotly
     
-    def distriuicao_vendas(self):
+    def distribuicao_vendas(self):
         fig = px.histogram(
             self.dados,
             x = 'valor',
@@ -155,12 +156,11 @@ def analise_outliers(self):
             x = 'data',
             y = ['valor', 'media_movel_7', 'max_valor', 'min_valor'],
             title = 'Vendas Acumuladas ao Longo do tempo com Inghts Estatisticos',
-            labels = {'valor':'Vendas Acumuladas', 'media_movel_7': 'Media movel (7 dias)',
-                      'max_valor':'Máximo acumulado', 'min_valor': 'Minimo acumulado'},
+            labels = {'valor':'Vendas Acumuladas', 'media_movel_7': 'Media movel (7 dias)','max_valor':'Máximo acumulado', 'min_valor': 'Minimo acumulado'},
             markers = True
 
          )
-# adicionando  o crescimento percentual ao grafico como um LINHA DE ANOTAÇÕES
+	# adicionando  o crescimento percentual ao grafico como um LINHA DE ANOTAÇÕES
         fig.add_trace(
             go.Scatter(
                 x = df_acumulado['data'],
@@ -171,7 +171,7 @@ def analise_outliers(self):
                 yaxis = 'y2'
             )
         )
-#estilização do grafico, ajustando a estética e com serão mostrados os valores
+	#estilização do grafico, ajustando a estética e com serão mostrados os valores
         fig.update_layout(
             title_font = dict(size=20, family='Poppins', color='#2980b9'),
             plot_bgcolor = "#34495e",
@@ -179,9 +179,9 @@ def analise_outliers(self):
             font = dict(color='#ecf0f1', family='Roboto'),
             xaxis = dict(
                 title = 'Data',
-                tickformat = '%Y'-%m-%d',
+                tickformat = '%Y-%m-%d',
                 showgrid = True,
-                gricolor = '#7f8c8d',
+                gridcolor = '#7f8c8d',
                 tickangle = 45
             ),
             yaxis = dict(
@@ -209,8 +209,8 @@ def analise_outliers(self):
             margin = dict(t=50, b=50, l=40, r=40),
             shapes= [
                 dict(
-                    Type = "line",
-                    x0=df_acumulado['data'].mim(),
+                    type = "line",
+                    x0=df_acumulado['data'].min(),
                     x1=df_acumulado['data'].max(),
                     y0=df_acumulado['max_valor'].max(),
                     y1=df_acumulado['max_valor']. max(),
@@ -218,8 +218,8 @@ def analise_outliers(self):
                     name="Máximo Histórico"
                 ),
                 dict(
-                    Type = "line",
-                    x0=df_acumulado['data'].mim(),
+                    type = "line",
+                    x0=df_acumulado['data'].min(),
                     x1=df_acumulado['data'].max(),
                     y0=df_acumulado['max_valor'].max(),
                     y1=df_acumulado['max_valor']. max(),
@@ -227,8 +227,6 @@ def analise_outliers(self):
                     name="Minimo Histórico"
                 )
             ]
-            
-
         )       
 
 # --------------------------------instaciar o objeto de analise de vendas
@@ -326,7 +324,7 @@ def upgrade_graphs(produtos, regioes, ano, start_date, end_date):
 
         fig_acumulado = analise.vendas_acumuladas()
         
-        return fig_produto, fig_regiao, fig_mensal, fig_diario, fig_dia_da_semana, fig_outliers, fig_distribuicao, fig_media_desvio
+        return fig_produto, fig_regiao, fig_mensal, fig_diario, fig_dia_da_semana, fig_outliers, fig_distribuicao, fig_media_desvio, fig_acumulado
         
     except Exception as e:
         # sempre que ocorrer algum erro, mostrar a mensagem de erro e retornar gráficos vazios
