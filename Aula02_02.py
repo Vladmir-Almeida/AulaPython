@@ -224,7 +224,7 @@ def atualizar_texto(cliente_selecionado, categoria_selecionada):
 def visual01(clientes, mes, categoria, taggle):
     template = dark_theme if taggle else vapor_theme
 
-    nome_cliente = filtro_cliente(cliente)
+    nome_cliente = filtro_cliente(clientes)
     nome_categoria = filtro_categoria(categoria)
     nome_mes = filtro_mes(mes)
 
@@ -347,7 +347,7 @@ def visual02_03(mes, categoria, taggle):
         r = df_vendasMesLoja3['Total Vendas'],
         theta= df_vendasMesLoja3['Loja'],
         fill='toself',
-        line=dict(color='rgb(31, 119, 180)', size=8),
+        line=dict(color='rgb(31, 119, 180)'),
         marker=dict(color='rgb(31, 119, 180)', size=8),
         opacity=0.7
     ))
@@ -378,3 +378,4 @@ def visual02_03(mes, categoria, taggle):
 # Suindo servidor
 if __name__ == '__main__':
     app.run_server(debug=True)
+  
